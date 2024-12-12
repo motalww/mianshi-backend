@@ -1,7 +1,7 @@
 package com.www.mianshi.service;
 
-import com.www.mianshi.model.entity.PostThumb;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.www.mianshi.model.entity.PostThumb;
 import com.www.mianshi.model.entity.User;
 
 /**

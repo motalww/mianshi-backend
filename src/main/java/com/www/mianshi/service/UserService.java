@@ -6,9 +6,10 @@ import com.www.mianshi.model.dto.user.UserQueryRequest;
 import com.www.mianshi.model.entity.User;
 import com.www.mianshi.model.vo.LoginUserVO;
 import com.www.mianshi.model.vo.UserVO;
-import java.util.List;
-import javax.servlet.http.HttpServletRequest;
 import me.chanjar.weixin.common.bean.WxOAuth2UserInfo;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 用户服务
