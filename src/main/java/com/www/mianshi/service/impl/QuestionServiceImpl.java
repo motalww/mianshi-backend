@@ -1,7 +1,9 @@
 package com.www.mianshi.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.www.mianshi.common.ErrorCode;
@@ -10,9 +12,11 @@ import com.www.mianshi.exception.ThrowUtils;
 import com.www.mianshi.mapper.QuestionMapper;
 import com.www.mianshi.model.dto.question.QuestionQueryRequest;
 import com.www.mianshi.model.entity.Question;
+import com.www.mianshi.model.entity.QuestionBankQuestion;
 import com.www.mianshi.model.entity.User;
 import com.www.mianshi.model.vo.QuestionVO;
 import com.www.mianshi.model.vo.UserVO;
+import com.www.mianshi.service.QuestionBankQuestionService;
 import com.www.mianshi.service.QuestionService;
 import com.www.mianshi.service.UserService;
 import com.www.mianshi.utils.SqlUtils;
@@ -40,6 +44,9 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private QuestionBankQuestionService questionBankQuestionService;
 
     /**
      * 校验数据
@@ -218,6 +225,30 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
 
         questionVOPage.setRecords(questionVOList);
         return questionVOPage;
+    }
+
+    @Override
+    public Page<Question> listQuestionByPage(QuestionQueryRequest questionQueryRequest) {
+        long current = questionQueryRequest.getCurrent();
+        long size = questionQueryRequest.getPageSize();
+
+        QueryWrapper<Question> questionQueryWrapper=this.getQueryWrapper(questionQueryRequest);
+
+        Long questionBankId = questionQueryRequest.getQuestionBankId();
+        if(questionBankId != null){
+            LambdaQueryWrapper<QuestionBankQuestion> queryWrapper = Wrappers.lambdaQuery(QuestionBankQuestion.class)
+                    .select(QuestionBankQuestion::getQuestionId)
+                    .eq(QuestionBankQuestion::getQuestionBankId, questionBankId);
+            List<QuestionBankQuestion> questionBankQuestions = questionBankQuestionService.list(queryWrapper);
+            if(CollUtil.isNotEmpty(questionBankQuestions)){
+                Set<Long> questionIds=questionBankQuestions.stream().
+                        map(QuestionBankQuestion::getQuestionId).collect(Collectors.toSet());
+                questionQueryWrapper.in("id", questionIds);
+            }
+        }
+        // 查询数据库
+        Page<Question> questionPage = this.page(new Page<>(current, size), questionQueryWrapper);
+        return questionPage;
     }
 
 }

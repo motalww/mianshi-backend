@@ -9,19 +9,25 @@ import com.www.mianshi.constant.CommonConstant;
 import com.www.mianshi.exception.ThrowUtils;
 import com.www.mianshi.mapper.QuestionBankQuestionMapper;
 import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionQueryRequest;
+import com.www.mianshi.model.entity.Question;
+import com.www.mianshi.model.entity.QuestionBank;
 import com.www.mianshi.model.entity.QuestionBankQuestion;
 import com.www.mianshi.model.entity.User;
 import com.www.mianshi.model.vo.QuestionBankQuestionVO;
 import com.www.mianshi.model.vo.UserVO;
 import com.www.mianshi.service.QuestionBankQuestionService;
+import com.www.mianshi.service.QuestionBankService;
+import com.www.mianshi.service.QuestionService;
 import com.www.mianshi.service.UserService;
 import com.www.mianshi.utils.SqlUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +46,14 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
     @Resource
     private UserService userService;
 
+    @Resource
+    @Lazy
+    private QuestionService questionService;
+
+    @Resource
+    @Lazy
+    private QuestionBankService questionBankService;
+
     /**
      * 校验数据
      *
@@ -49,6 +63,21 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
     @Override
     public void validQuestionBankQuestion(QuestionBankQuestion questionBankQuestion, boolean add) {
         ThrowUtils.throwIf(questionBankQuestion == null, ErrorCode.PARAMS_ERROR);
+        //题目和题库必须存在
+        Long questionBankId = questionBankQuestion.getQuestionBankId();
+        if (questionBankId != null) {
+            ThrowUtils.throwIf(questionBankId <= 0, ErrorCode.PARAMS_ERROR,"题库参数异常");
+            QuestionBank questionBank=questionBankService.getById(questionBankId);
+            ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR,"题库不存在");
+        }
+        Long questionId = questionBankQuestion.getQuestionId();
+        if (questionId != null) {
+            ThrowUtils.throwIf(questionId <= 0, ErrorCode.PARAMS_ERROR,"题目参数异常");
+            Question question=questionService.getById(questionId);
+            ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR,"题目不存在");
+        }
+
+
         //无需校验
         // todo 从对象中取值
         // 创建数据时，参数不能为空

@@ -34,6 +34,11 @@ public class QuestionAddRequest implements Serializable {
      */
     private String answer;
 
+    /**
+     * 仅会员可见，0:否 1:是
+     */
+    private int needVip;
+
 
     private static final long serialVersionUID = 1L;
 }

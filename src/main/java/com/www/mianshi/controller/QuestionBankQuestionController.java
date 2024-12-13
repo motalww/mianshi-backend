@@ -1,5 +1,6 @@
 package com.www.mianshi.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.www.mianshi.annotation.AuthCheck;
 import com.www.mianshi.common.BaseResponse;
@@ -11,6 +12,7 @@ import com.www.mianshi.exception.BusinessException;
 import com.www.mianshi.exception.ThrowUtils;
 import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionAddRequest;
 import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionQueryRequest;
+import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionRemoveRequest;
 import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionUpdateRequest;
 import com.www.mianshi.model.entity.QuestionBankQuestion;
 import com.www.mianshi.model.entity.User;
@@ -200,6 +202,29 @@ public class QuestionBankQuestionController {
                 questionBankQuestionService.getQueryWrapper(questionBankQuestionQueryRequest));
         // 获取封装类
         return ResultUtils.success(questionBankQuestionService.getQuestionBankQuestionVOPage(questionBankQuestionPage, request));
+    }
+
+
+    /**
+     * 移除题目题库管联
+     *
+     * @param questionBankQuestionRemoveRequest
+     * @return
+     */
+    @PostMapping("/remove")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> removeQuestionBankQuestion
+            (@RequestBody QuestionBankQuestionRemoveRequest questionBankQuestionRemoveRequest) {
+        ThrowUtils.throwIf(questionBankQuestionRemoveRequest == null, ErrorCode.PARAMS_ERROR);
+        // 补充查询条件，只查询当前登录用户的数据
+        Long questionBankId = questionBankQuestionRemoveRequest.getQuestionBankId();
+        Long questionId = questionBankQuestionRemoveRequest.getQuestionId();
+
+        LambdaQueryWrapper<QuestionBankQuestion> queryWrapper=new LambdaQueryWrapper<>();
+        queryWrapper.eq(QuestionBankQuestion::getQuestionBankId,questionBankId)
+                .eq(QuestionBankQuestion::getQuestionId,questionId);
+
+        return ResultUtils.success(questionBankQuestionService.remove(queryWrapper));
     }
 
     /**

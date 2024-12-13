@@ -9,14 +9,17 @@ import com.www.mianshi.common.ResultUtils;
 import com.www.mianshi.constant.UserConstant;
 import com.www.mianshi.exception.BusinessException;
 import com.www.mianshi.exception.ThrowUtils;
+import com.www.mianshi.model.dto.question.QuestionQueryRequest;
 import com.www.mianshi.model.dto.questionBank.QuestionBankAddRequest;
 import com.www.mianshi.model.dto.questionBank.QuestionBankEditRequest;
 import com.www.mianshi.model.dto.questionBank.QuestionBankQueryRequest;
 import com.www.mianshi.model.dto.questionBank.QuestionBankUpdateRequest;
+import com.www.mianshi.model.entity.Question;
 import com.www.mianshi.model.entity.QuestionBank;
 import com.www.mianshi.model.entity.User;
 import com.www.mianshi.model.vo.QuestionBankVO;
 import com.www.mianshi.service.QuestionBankService;
+import com.www.mianshi.service.QuestionService;
 import com.www.mianshi.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -42,6 +45,9 @@ public class QuestionBankController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private QuestionService questionService;
+
     // region 增删改查
 
     /**
@@ -52,6 +58,7 @@ public class QuestionBankController {
      * @return
      */
     @PostMapping("/add")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addQuestionBank(@RequestBody QuestionBankAddRequest questionBankAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(questionBankAddRequest == null, ErrorCode.PARAMS_ERROR);
         // todo 在此处将实体类和 DTO 进行转换
@@ -78,6 +85,7 @@ public class QuestionBankController {
      * @return
      */
     @PostMapping("/delete")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteQuestionBank(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -125,19 +133,32 @@ public class QuestionBankController {
     }
 
     /**
-     * 根据 id 获取题库（封装类）
+     * 根据 questionBankQueryRequest 获取题库（封装类）
      *
-     * @param id
+     * @param questionBankQueryRequest
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<QuestionBankVO> getQuestionBankVOById(long id, HttpServletRequest request) {
-        ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
+    public BaseResponse<QuestionBankVO> getQuestionBankVOById(QuestionBankQueryRequest questionBankQueryRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(questionBankQueryRequest==null, ErrorCode.PARAMS_ERROR);
+        Long id = questionBankQueryRequest.getId();
+        ThrowUtils.throwIf(id<=0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
         QuestionBank questionBank = questionBankService.getById(id);
         ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR);
+
+        //查询题库信息
+        QuestionBankVO questionBankVO=questionBankService.getQuestionBankVO(questionBank, request);
+
+        boolean needQueryQuestionList = questionBankQueryRequest.isNeedQueryQuestionList();
+        if(needQueryQuestionList){
+            QuestionQueryRequest questionQueryRequest = new QuestionQueryRequest();
+            questionQueryRequest.setQuestionBankId(id);
+            Page<Question> questionPage = questionService.listQuestionByPage(questionQueryRequest);
+            questionBankVO.setQuestionPage(questionPage);
+        }
         // 获取封装类
-        return ResultUtils.success(questionBankService.getQuestionBankVO(questionBank, request));
+        return ResultUtils.success(questionBankVO);
     }
 
     /**
@@ -211,6 +232,7 @@ public class QuestionBankController {
      * @return
      */
     @PostMapping("/edit")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> editQuestionBank(@RequestBody QuestionBankEditRequest questionBankEditRequest, HttpServletRequest request) {
         if (questionBankEditRequest == null || questionBankEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
