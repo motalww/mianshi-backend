@@ -119,4 +119,7 @@ public interface UserService extends IService<User> {
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
 
+    boolean addUserSignIn(Long id);
+
+    List<Integer> getUserSignInRecord(Long id, Integer year);
 }

@@ -1,5 +1,6 @@
 package com.www.mianshi.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -86,6 +87,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         // todo 从对象中取值
         Long id = questionQueryRequest.getId();
         Long notId = questionQueryRequest.getNotId();
+        Long bankId = questionQueryRequest.getQuestionBankId();
         String title = questionQueryRequest.getTitle();
         String content = questionQueryRequest.getContent();
         String searchText = questionQueryRequest.getSearchText();
@@ -164,6 +166,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
 
         return questionVO;
     }
+
 
     /**
      * 分页获取题目封装

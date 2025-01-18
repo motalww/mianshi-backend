@@ -10,13 +10,12 @@ import com.www.mianshi.common.ResultUtils;
 import com.www.mianshi.constant.UserConstant;
 import com.www.mianshi.exception.BusinessException;
 import com.www.mianshi.exception.ThrowUtils;
-import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionAddRequest;
-import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionQueryRequest;
-import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionRemoveRequest;
-import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionUpdateRequest;
+import com.www.mianshi.model.dto.questionBankQuestion.*;
 import com.www.mianshi.model.entity.QuestionBankQuestion;
 import com.www.mianshi.model.entity.User;
 import com.www.mianshi.model.vo.QuestionBankQuestionVO;
+import com.www.mianshi.model.vo.QuestionListVO;
+import com.www.mianshi.model.vo.QuestionVO;
 import com.www.mianshi.service.QuestionBankQuestionService;
 import com.www.mianshi.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +24,12 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 题目题库关联接口
  *
- *  @author <a href="https://github.com/motalww">www</a>
- *
+ * @author <a href="https://github.com/motalww">www</a>
  */
 @RestController
 @RequestMapping("/questionBankQuestion")
@@ -167,7 +166,7 @@ public class QuestionBankQuestionController {
      */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<QuestionBankQuestionVO>> listQuestionBankQuestionVOByPage(@RequestBody QuestionBankQuestionQueryRequest questionBankQuestionQueryRequest,
-                                                               HttpServletRequest request) {
+                                                                                       HttpServletRequest request) {
         long current = questionBankQuestionQueryRequest.getCurrent();
         long size = questionBankQuestionQueryRequest.getPageSize();
         // 限制爬虫
@@ -188,7 +187,7 @@ public class QuestionBankQuestionController {
      */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<QuestionBankQuestionVO>> listMyQuestionBankQuestionVOByPage(@RequestBody QuestionBankQuestionQueryRequest questionBankQuestionQueryRequest,
-                                                                 HttpServletRequest request) {
+                                                                                         HttpServletRequest request) {
         ThrowUtils.throwIf(questionBankQuestionQueryRequest == null, ErrorCode.PARAMS_ERROR);
         // 补充查询条件，只查询当前登录用户的数据
         User loginUser = userService.getLoginUser(request);
@@ -214,17 +213,27 @@ public class QuestionBankQuestionController {
     @PostMapping("/remove")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> removeQuestionBankQuestion
-            (@RequestBody QuestionBankQuestionRemoveRequest questionBankQuestionRemoveRequest) {
+    (@RequestBody QuestionBankQuestionRemoveRequest questionBankQuestionRemoveRequest) {
         ThrowUtils.throwIf(questionBankQuestionRemoveRequest == null, ErrorCode.PARAMS_ERROR);
         // 补充查询条件，只查询当前登录用户的数据
         Long questionBankId = questionBankQuestionRemoveRequest.getQuestionBankId();
         Long questionId = questionBankQuestionRemoveRequest.getQuestionId();
 
-        LambdaQueryWrapper<QuestionBankQuestion> queryWrapper=new LambdaQueryWrapper<>();
-        queryWrapper.eq(QuestionBankQuestion::getQuestionBankId,questionBankId)
-                .eq(QuestionBankQuestion::getQuestionId,questionId);
+        LambdaQueryWrapper<QuestionBankQuestion> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(QuestionBankQuestion::getQuestionBankId, questionBankId)
+                .eq(QuestionBankQuestion::getQuestionId, questionId);
 
         return ResultUtils.success(questionBankQuestionService.remove(queryWrapper));
+    }
+
+    @PostMapping("/list/question/vo")
+    public BaseResponse<Page<QuestionListVO>> listQuestionBankQuestionVOByQuestionBankId(@RequestBody GetQuestionVOListByBankIdRequest questionQueryList, HttpServletRequest request) {
+        ThrowUtils.throwIf(questionQueryList == null, ErrorCode.PARAMS_ERROR);
+        Long bankId = questionQueryList.getBankId();
+        ThrowUtils.throwIf(bankId == null || bankId <= 0, ErrorCode.PARAMS_ERROR);
+        long pageSize = questionQueryList.getPageSize();
+        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
+        return ResultUtils.success(questionBankQuestionService.GetQuestionVOListByBankIdRequest(questionQueryList,request));
     }
 
     /**

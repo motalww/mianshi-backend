@@ -3,9 +3,12 @@ package com.www.mianshi.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.www.mianshi.model.dto.questionBankQuestion.GetQuestionVOListByBankIdRequest;
 import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionQueryRequest;
 import com.www.mianshi.model.entity.QuestionBankQuestion;
 import com.www.mianshi.model.vo.QuestionBankQuestionVO;
+import com.www.mianshi.model.vo.QuestionListVO;
+import com.www.mianshi.model.vo.QuestionVO;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -50,4 +53,11 @@ public interface QuestionBankQuestionService extends IService<QuestionBankQuesti
      * @return
      */
     Page<QuestionBankQuestionVO> getQuestionBankQuestionVOPage(Page<QuestionBankQuestion> questionBankQuestionPage, HttpServletRequest request);
+
+    /**
+     *
+     * @param questionQueryList
+     * @return
+     */
+    Page<QuestionListVO> GetQuestionVOListByBankIdRequest(GetQuestionVOListByBankIdRequest questionQueryList, HttpServletRequest request);
 }

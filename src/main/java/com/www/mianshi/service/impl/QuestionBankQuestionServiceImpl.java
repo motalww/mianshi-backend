@@ -1,19 +1,26 @@
 package com.www.mianshi.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.www.mianshi.common.ErrorCode;
 import com.www.mianshi.constant.CommonConstant;
 import com.www.mianshi.exception.ThrowUtils;
 import com.www.mianshi.mapper.QuestionBankQuestionMapper;
+import com.www.mianshi.model.dto.questionBankQuestion.GetQuestionVOListByBankIdRequest;
 import com.www.mianshi.model.dto.questionBankQuestion.QuestionBankQuestionQueryRequest;
 import com.www.mianshi.model.entity.Question;
 import com.www.mianshi.model.entity.QuestionBank;
 import com.www.mianshi.model.entity.QuestionBankQuestion;
 import com.www.mianshi.model.entity.User;
 import com.www.mianshi.model.vo.QuestionBankQuestionVO;
+import com.www.mianshi.model.vo.QuestionListVO;
+import com.www.mianshi.model.vo.QuestionVO;
 import com.www.mianshi.model.vo.UserVO;
 import com.www.mianshi.service.QuestionBankQuestionService;
 import com.www.mianshi.service.QuestionBankService;
@@ -27,7 +34,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,8 +43,7 @@ import java.util.stream.Collectors;
 /**
  * 题目题库关联服务实现
  *
- *  @author <a href="https://github.com/motalww">www</a>
- *
+ * @author <a href="https://github.com/motalww">www</a>
  */
 @Service
 @Slf4j
@@ -58,7 +64,7 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
      * 校验数据
      *
      * @param questionBankQuestion
-     * @param add      对创建的数据进行校验
+     * @param add                  对创建的数据进行校验
      */
     @Override
     public void validQuestionBankQuestion(QuestionBankQuestion questionBankQuestion, boolean add) {
@@ -66,15 +72,15 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
         //题目和题库必须存在
         Long questionBankId = questionBankQuestion.getQuestionBankId();
         if (questionBankId != null) {
-            ThrowUtils.throwIf(questionBankId <= 0, ErrorCode.PARAMS_ERROR,"题库参数异常");
-            QuestionBank questionBank=questionBankService.getById(questionBankId);
-            ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR,"题库不存在");
+            ThrowUtils.throwIf(questionBankId <= 0, ErrorCode.PARAMS_ERROR, "题库参数异常");
+            QuestionBank questionBank = questionBankService.getById(questionBankId);
+            ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR, "题库不存在");
         }
         Long questionId = questionBankQuestion.getQuestionId();
         if (questionId != null) {
-            ThrowUtils.throwIf(questionId <= 0, ErrorCode.PARAMS_ERROR,"题目参数异常");
-            Question question=questionService.getById(questionId);
-            ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR,"题目不存在");
+            ThrowUtils.throwIf(questionId <= 0, ErrorCode.PARAMS_ERROR, "题目参数异常");
+            Question question = questionService.getById(questionId);
+            ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR, "题目不存在");
         }
 
 
@@ -196,6 +202,9 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
         Set<Long> userIdSet = questionBankQuestionList.stream().map(QuestionBankQuestion::getUserId).collect(Collectors.toSet());
         Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
                 .collect(Collectors.groupingBy(User::getId));
+
+        Set<Long> questionIdSet = questionBankQuestionList.stream().map(QuestionBankQuestion::getQuestionId).collect(Collectors.toSet());
+        Map<Long, List<Question>> questionIdQuestionMap = questionService.listByIds(questionIdSet).stream().collect(Collectors.groupingBy(Question::getId));
         // 2. 已登录，获取用户点赞、收藏状态
 //        Map<Long, Boolean> questionBankQuestionIdHasThumbMap = new HashMap<>();
 //        Map<Long, Boolean> questionBankQuestionIdHasFavourMap = new HashMap<>();
@@ -224,6 +233,12 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
                 user = userIdUserListMap.get(userId).get(0);
             }
             questionBankQuestionVO.setUser(userService.getUserVO(user));
+            Long questionId = questionBankQuestionVO.getQuestionId();
+            Question question = null;
+            if (questionIdQuestionMap.containsKey(questionId)) {
+                question = questionIdQuestionMap.get(questionId).get(0);
+            }
+            questionBankQuestionVO.setQuestion(QuestionVO.objToVo(question));
 //            questionBankQuestionVO.setHasThumb(questionBankQuestionIdHasThumbMap.getOrDefault(questionBankQuestionVO.getId(), false));
 //            questionBankQuestionVO.setHasFavour(questionBankQuestionIdHasFavourMap.getOrDefault(questionBankQuestionVO.getId(), false));
         });
@@ -231,6 +246,48 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
 
         questionBankQuestionVOPage.setRecords(questionBankQuestionVOList);
         return questionBankQuestionVOPage;
+    }
+
+    @Override
+    public Page<QuestionListVO> GetQuestionVOListByBankIdRequest(GetQuestionVOListByBankIdRequest questionQueryList,HttpServletRequest request) {
+        Long bankId = questionQueryList.getBankId();
+        String title = questionQueryList.getTitle();
+        Integer needVIP = questionQueryList.getNeedVIP();
+        List<String> tagList = questionQueryList.getTags();
+        int current = questionQueryList.getCurrent();
+        int pageSize = questionQueryList.getPageSize();
+        String sortField = questionQueryList.getSortField();
+        String sortOrder = questionQueryList.getSortOrder();
+        List<QuestionBankQuestion> questionIdList = this.list(Wrappers.lambdaQuery(QuestionBankQuestion.class).
+                eq(QuestionBankQuestion::getQuestionBankId, bankId)
+                .select(QuestionBankQuestion::getQuestionId));
+        List<Long> questionIds = new ArrayList<>();
+        questionIdList.forEach(questionBankQuestion -> {
+            if (questionBankQuestion.getQuestionId() != null) {
+                questionIds.add(questionBankQuestion.getQuestionId());
+            }
+        });
+        LambdaQueryWrapper<Question> questionLambdaQueryWrapper = Wrappers.lambdaQuery(Question.class).eq(needVIP != null, Question::getNeedVip, needVIP)
+                .like(StrUtil.isNotBlank(title), Question::getTitle, title)
+                .in(Question::getId,questionIds);
+        // JSON 数组查询
+        if (CollUtil.isNotEmpty(tagList)) {
+            for (String tag : tagList) {
+                questionLambdaQueryWrapper.like(Question::getTags, "\"" + tag + "\"");
+            }
+        }
+
+        Page<Question> questionPage = questionService.page(new Page<>(current, pageSize), questionLambdaQueryWrapper);
+        List<Question> questionListRecord = questionPage.getRecords();
+        Page<QuestionListVO> questionListVOPage = new Page<>(questionPage.getCurrent(), questionPage.getSize(), questionPage.getTotal());
+        if (CollUtil.isEmpty(questionListRecord)) {
+            return questionListVOPage;
+        }
+        // 对象列表 => 封装对象列表
+        List<QuestionListVO> questionVOList = questionListRecord.stream().
+                map(question -> BeanUtil.copyProperties(question, QuestionListVO.class)).collect(Collectors.toList());
+        questionListVOPage.setRecords(questionVOList);
+        return questionListVOPage;
     }
 
 }
